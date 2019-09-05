@@ -1,6 +1,6 @@
-module raklib
+module vraklib
 
-struct RakLib {
+struct VRakLib {
     server_ip string
     server_port u16
 

@@ -1,4 +1,4 @@
-module raklib
+module vraklib
 
 import net
 
