@@ -1,0 +1,5 @@
+module raklib
+
+struct Packet {
+
+}
