@@ -6,8 +6,6 @@ module vraklib
 // #include <unistd.h>
 // #include <netdb.h>
 
-import net
-
 const (
     WSA_V1  = 0x100 // C.MAKEWORD(1, 0)
     WSA_V11 = 0x101 // C.MAKEWORD(1, 1)
@@ -89,19 +87,42 @@ fn (s UdpSocket) receive() ?Packet {
 	bytes := [Default_Buffer_Size]byte
 
     size := 16
-    res := C.recvfrom(s.sock, bytes, bufsize, 0, &addr, 16)
-    if res == -1 { return error('Could not receive the packet.') }
-
-    sie := C.INET_ADDRSTRLEN
-    ip := [sie]byte
-    C.inet_ntop(C.AF_INET, &addr.sin_addr, ip, C.INET_ADDRSTRLEN)
-    return Packet{
-        buffer: bytes
+    res := C.recvfrom(s.sock, bytes, bufsize, 0, &addr, size)
+    if res == -1 {
+        $if windows {
+            C.WSACleanup()
+        }
+        return error('Could not receive the packet.')
     }
+
+    //sie := C.INET_ADDRSTRLEN
+    //ip := [sie]byte
+    //C.inet_ntop(C.AF_INET, &addr.sin_addr, ip, C.INET_ADDRSTRLEN)
+
+    pck := new_packet(bytes, res)
+    pck.ip = ''
+    pck.port = addr.sin_port
+    
+    return pck
 }
 
-fn (s UdpSocket) send(packet Packet) {
-    
+fn (s UdpSocket) send(packet Packet) ?int {
+    mut addr := C.sockaddr_in{}
+    addr.sin_family = C.AF_INET
+    addr.sin_port = packet.port
+
+    buffer := packet.byte_buffer.get_buffer()
+    length := packet.byte_buffer.get_length()
+
+    size := 16
+    res := int(C.sendto(s.sock, buffer.data, length, 0, &addr, size))
+    if res == -1 {
+        $if windows {
+            C.WSACleanup()
+        }
+        return error('Could not send the packet')
+    }
+    return res
 }
 
 fn (s UdpSocket) close() {

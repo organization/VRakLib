@@ -1,0 +1,5 @@
+*.exe
+*.c
+*.o
+*.dSYM
+/vraklib_test
