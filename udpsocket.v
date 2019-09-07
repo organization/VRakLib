@@ -87,7 +87,7 @@ fn (s UdpSocket) receive() ?Packet {
 	bytes := [Default_Buffer_Size]byte
 
     size := 16
-    res := C.recvfrom(s.sock, bytes, bufsize, 0, &addr, size)
+    res := int(C.recvfrom(s.sock, bytes, bufsize, 0, &addr, size))
     if res == -1 {
         $if windows {
             C.WSACleanup()
@@ -95,12 +95,11 @@ fn (s UdpSocket) receive() ?Packet {
         return error('Could not receive the packet.')
     }
 
-    //sie := C.INET_ADDRSTRLEN
-    //ip := [sie]byte
-    //C.inet_ntop(C.AF_INET, &addr.sin_addr, ip, C.INET_ADDRSTRLEN)
+    ip := [16]byte
+    C.inet_ntop(C.AF_INET, &addr.sin_addr, ip, C.INET_ADDRSTRLEN)
 
-    pck := new_packet(bytes, res)
-    pck.ip = ''
+    mut pck := new_packet(bytes, u32(res))
+    pck.ip = tos(ip, 16)
     pck.port = addr.sin_port
     
     return pck
@@ -115,7 +114,7 @@ fn (s UdpSocket) send(packet Packet) ?int {
     length := packet.byte_buffer.get_length()
 
     size := 16
-    res := int(C.sendto(s.sock, buffer.data, length, 0, &addr, size))
+    res := int(C.sendto(s.sock, buffer, length, 0, &addr, size))
     if res == -1 {
         $if windows {
             C.WSACleanup()
