@@ -339,7 +339,7 @@ pub fn (b ByteBuffer) get_endianness() Endianness {
     return b.endianness
 }
 
-pub fn (b ByteBuffer) get_system_endianness() Endianness {
+pub fn () get_system_endianness() Endianness {
     return Endianness.big //TODO
 }
 
