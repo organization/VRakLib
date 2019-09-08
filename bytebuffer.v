@@ -5,7 +5,7 @@ enum Endianness {
 }
 
 struct ByteBuffer {
-mut:
+pub mut:
     endianness Endianness
     buffer byteptr
     length u32
@@ -27,11 +27,12 @@ pub fn (b mut ByteBuffer) put_byte(v byte) {
     b.position++
 }
 
-pub fn (b mut ByteBuffer) put_bytes(bytes []byte, size int) {
+pub fn (b mut ByteBuffer) put_bytes(bytes byteptr, size int) {
     assert b.position + u32(size) <= b.length
     if size > 0 {
-        for v in bytes {
-            b.buffer[b.position] = v
+        mut i := 0
+        for i < size {
+            b.buffer[b.position] = bytes[i]
             b.position++
         }
     }
@@ -61,6 +62,22 @@ pub fn (b mut ByteBuffer) put_ushort(v u16) {
     b.buffer[b.position] = byte(v & u16(0xFF))
     b.buffer[b.position + u32(1)] = byte((v >> u16(8)) & int(0xFF))
     b.position += u32(sizeof(u16))
+}
+
+pub fn (b mut ByteBuffer) put_triad(v int) {
+    assert b.position + u32(3) <= b.length
+    b.buffer[b.position] = byte((v >> 16) & 0xFF)
+    b.buffer[b.position + u32(1)] = byte((v >> 8) & 0xFF)
+    b.buffer[b.position + u32(2)] = byte(v & 0xFF)
+    b.position += u32(3)
+}
+
+pub fn (b mut ByteBuffer) put_ltriad(v int) {
+    assert b.position + u32(3) <= b.length
+    b.buffer[b.position] = byte(v & 0xFF)
+    b.buffer[b.position + u32(1)] = byte((v >> 8) & 0xFF)
+    b.buffer[b.position + u32(2)] = byte((v >> 16) & 0xFF)
+    b.position += u32(3)
 }
 
 pub fn (b mut ByteBuffer) put_int(v int) {
@@ -142,6 +159,24 @@ pub fn (b mut ByteBuffer) put_string(v string) {
     }
 }
 
+pub fn (b mut ByteBuffer) get_bytes(size int) byteptr {
+    assert b.position + u32(size) <= b.length
+
+    if size == 0 {
+        //return byte
+    }
+
+    mut v := []byte
+
+    mut i := 0
+    for i < size {
+        v << b.buffer[i]
+        i++
+    }
+    b.position += u32(size)
+    return v.data
+}
+
 pub fn (b mut ByteBuffer) get_byte() byte {
     assert b.position + u32(sizeof(byte)) <= b.length
     v := b.buffer[b.position]
@@ -178,6 +213,26 @@ pub fn (b mut ByteBuffer) get_ushort() u16 {
     v = u16((v << u16(8)) + int(b.buffer[b.position + u32(1)]))
     v = u16((v << u16(8)) + int(b.buffer[b.position]))
     b.position += u32(sizeof(u16))
+    return v
+}
+
+pub fn (b mut ByteBuffer) get_triad() int {
+    assert b.position + u32(3) <= b.length
+    mut v := 0
+    v = int((v << int(8)) + int(b.buffer[b.position + u32(2)]))
+    v = int((v << int(8)) + int(b.buffer[b.position + u32(1)]))
+    v = int((v << int(8)) + int(b.buffer[b.position]))
+    b.position += u32(3)
+    return v
+}
+
+pub fn (b mut ByteBuffer) get_ltriad() int {
+    assert b.position + u32(3) <= b.length
+    mut v := 0
+    v = int((v << int(8)) + int(b.buffer[b.position]))
+    v = int((v << int(8)) + int(b.buffer[b.position + u32(1)]))
+    v = int((v << int(8)) + int(b.buffer[b.position + u32(2)]))
+    b.position += u32(3)
     return v
 }
 
@@ -281,22 +336,17 @@ pub fn (b mut ByteBuffer) set_position(newPosition u32) {
     b.position = newPosition
 }
 
-pub fn (b ByteBuffer) get_position() u32 {
-    return b.position
-}
-
 pub fn (b mut ByteBuffer) set_endianness(newEndianness Endianness) {
     b.endianness = newEndianness
 }
 
-pub fn (b ByteBuffer) get_endianness() Endianness {
-    return b.endianness
-}
-
-pub fn (b ByteBuffer) get_buffer() byteptr {
-    return b.buffer
-}
-
-pub fn (b ByteBuffer) get_length() u32 {
-    return b.length
+pub fn (b ByteBuffer) print() {
+    mut i := 0
+    for i < int(b.length) {
+        println(b.buffer[i])
+        if (i + 1) % 8 == 0 || i == int(b.length) - 1 {
+            println('\n')
+        }
+        i++
+    }
 }

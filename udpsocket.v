@@ -2,9 +2,6 @@ module vraklib
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
-// #include <netinet/in.h>
-// #include <unistd.h>
-// #include <netdb.h>
 
 const (
     WSA_V1  = 0x100 // C.MAKEWORD(1, 0)
@@ -46,7 +43,7 @@ mut:
     sock int
 }
 
-pub fn create_socket(port int) ?UdpSocket {
+pub fn create_socket(ip string, port int) ?UdpSocket {
     $if windows {
         mut wsadata := C.WSAData{}
         res := C.WSAStartup(WSA_V22, &wsadata)
@@ -63,10 +60,19 @@ pub fn create_socket(port int) ?UdpSocket {
     mut addr := C.sockaddr_in{}
     addr.sin_family = C.AF_INET
     addr.sin_port = C.htons(port)
-    addr.sin_addr.s_addr = C.htonl(C.INADDR_ANY)
+
+    if ip.len != 0 {
+        C.inet_pton(C.AF_INET, ip.str, &addr.sin_addr)
+    } else {
+        addr.sin_addr.s_addr = C.htonl(C.INADDR_ANY)
+    }
     size := 16
 
     if int(C.bind(sock, &addr, size)) == -1 {
+        $if windows {
+            println('Error: ${C.WSAGetLastError}')
+            C.WSACleanup()
+        }
         return error('Socket bind failed')
     }
 
@@ -90,28 +96,30 @@ fn (s UdpSocket) receive() ?Packet {
     res := int(C.recvfrom(s.sock, bytes, bufsize, 0, &addr, size))
     if res == -1 {
         $if windows {
+            println('Error: ${C.WSAGetLastError}')
             C.WSACleanup()
         }
         return error('Could not receive the packet.')
     }
+    println(res)
 
     ip := [16]byte
     C.inet_ntop(C.AF_INET, &addr.sin_addr, ip, C.INET_ADDRSTRLEN)
 
-    mut pck := new_packet(bytes, u32(res))
-    pck.ip = tos(ip, 16)
-    pck.port = addr.sin_port
-    
-    return pck
+    return Packet {
+        buffer: new_bytebuffer(bytes, u32(res))
+        ip: tos(ip, 16)
+        port: addr.sin_port
+    }
 }
 
-fn (s UdpSocket) send(packet Packet) ?int {
+fn (s UdpSocket) send(packet DataPacketHandler, p Packet) ?int {
     mut addr := C.sockaddr_in{}
     addr.sin_family = C.AF_INET
-    addr.sin_port = packet.port
+    addr.sin_port = p.port
 
-    buffer := packet.byte_buffer.get_buffer()
-    length := packet.byte_buffer.get_length()
+    buffer := p.buffer.buffer
+    length := p.buffer.length
 
     size := 16
     res := int(C.sendto(s.sock, buffer, length, 0, &addr, size))
