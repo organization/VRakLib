@@ -52,7 +52,7 @@ pub fn (b mut ByteBuffer) put_bool(v bool) {
 
 pub fn (b mut ByteBuffer) put_short(v i16) {
     assert b.position + u32(sizeof(i16)) <= b.length
-    if get_system_endianness() != endianness {
+    if b.get_system_endianness() != endianness {
         
     }
     b.buffer[b.position] = byte(v & i16(0xFF))
@@ -339,7 +339,7 @@ pub fn (b ByteBuffer) get_endianness() Endianness {
     return b.endianness
 }
 
-pub fn () get_system_endianness() Endianness {
+pub fn (b ByteBuffer) get_system_endianness() Endianness {
     return Endianness.big //TODO
 }
 
