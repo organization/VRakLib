@@ -93,7 +93,7 @@ fn (s UdpSocket) receive() ?Packet {
 	bytes := [Default_Buffer_Size]byte
 
     size := 16
-    res := int(C.recvfrom(s.sock, bytes, bufsize, 0, &addr, size))
+    res := int(C.recvfrom(s.sock, bytes, bufsize, 0, &addr, &size))
     if res == -1 {
         $if windows {
             println('Error: ${C.WSAGetLastError}')
