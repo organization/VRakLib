@@ -101,7 +101,6 @@ fn (s UdpSocket) receive() ?Packet {
         }
         return error('Could not receive the packet.')
     }
-    println(res)
 
     ip := [16]byte
     C.inet_ntop(C.AF_INET, &addr.sin_addr, ip, C.INET_ADDRSTRLEN)

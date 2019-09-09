@@ -36,28 +36,42 @@ fn (r mut VRakLib) run() {
                     }
                 }
                 ping.decode()
+                
+                /*ping.p.buffer.position = u32(1)
+
+                println('s')
+                mut i := 0
+                bytes := ping.p.buffer.get_bytes(8)
+                for i < 8 {
+                    println(int(bytes[i]).hex())
+                    i++
+                }
+                println('e')*/
 
                 println('ping')
                 println(ping.ping_id)
-                println(ping.p.ip)
-                println(ping.p.port)
+                println(ping.client_id)
+                //println(ping.p.ip)
+                //println(ping.p.port)
 
+                title := 'MCPE;Minecraft V Server!;361;1.12.0;0;100;123456789;Test;Survival;'
+                len := 35 + title.len
                 mut pong := UnConnectedPongPacket {
                     p: Packet {
-                        buffer: new_bytebuffer([ byte(0) ; 35+40].data, u32(35 + 40))
+                        buffer: new_bytebuffer([ byte(0) ; len].data, u32(len))
                         ip: ping.p.ip
                         port: ping.p.port
                     }
                     server_id: 123456789
-                    ping_id: i64(ping.ping_id)
-                    str: 'MCPE;Minecraft V Server!;34;0.12.2;0;100'
+                    ping_id: ping.ping_id
+                    str: title
                 }
                 pong.encode()
 
-                println('pong')
-                println(pong.ping_id)
-                println(pong.p.ip)
-                println(pong.p.port)
+                //println('pong')
+                //println(pong.ping_id)
+                //println(pong.p.ip)
+                //println(pong.p.port)
 
                 r.socket.send(pong, pong.p)
             } else if pid == ConnectionRequest1 {
@@ -67,7 +81,6 @@ fn (r mut VRakLib) run() {
             } else {
                 // custom receive packet
             }
-            println(packet.buffer.length)
         }
     }
 }

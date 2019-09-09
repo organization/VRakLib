@@ -35,7 +35,8 @@ struct UnConnectedPingPacket {
 mut:
     p Packet
 
-    ping_id u64
+    ping_id i64
+    client_id i64
 }
 
 struct Replay1Packet {
@@ -69,7 +70,9 @@ fn (u UnConnectedPongPacket) decode() {}
 // UnConnectedPing
 fn (u mut UnConnectedPingPacket) decode() {
     u.p.buffer.position += u32(1) // Packet ID
-    u.ping_id = u.p.buffer.get_ulong()
+    u.ping_id = u.p.buffer.get_long()
+    u.p.buffer.get_bytes(RaknetMagicLength)
+    u.client_id = u.p.buffer.get_long()
 }
 
 // Replay1

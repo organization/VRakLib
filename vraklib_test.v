@@ -34,7 +34,7 @@ fn test_bytebuffer() {
 
     //bytebuffer.print()
 
-    mut v32 := u32(487234)
+    mut v32 := u32(1)
     print_bit32(v32)
 
     v32 = vraklib.swap32(v32)
