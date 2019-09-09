@@ -52,7 +52,7 @@ mut:
     p Packet
 
     version byte
-    mut_size i16
+    mtu_size i16
 }
 
 // UnConnectedPong
@@ -88,5 +88,5 @@ fn (r mut Request1Packet) encode() {}
 fn (r mut Request1Packet) decode() {
     r.p.buffer.position += u32(17) // Skip Raknet Magic And Packet ID
     r.version = r.p.buffer.get_byte()
-    r.mut_size = i16(r.p.buffer.length - r.p.buffer.position)
+    r.mtu_size = i16(r.p.buffer.length - r.p.buffer.position)
 }

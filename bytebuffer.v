@@ -392,7 +392,12 @@ pub fn (b mut ByteBuffer) get_string() string {
 }
 
 pub fn (b ByteBuffer) get_system_endianness() Endianness {
-    return Endianness.little // TODO
+    if C.__BYTE_ORDER__ == C.__ORDER_LITTLE_ENDIAN__ {
+        return Endianness.little
+    }
+    else {
+        return Endianness.big
+    }
 }
 
 pub fn (b ByteBuffer) print() {

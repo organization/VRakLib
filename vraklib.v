@@ -37,6 +37,11 @@ fn (r mut VRakLib) run() {
                 }
                 ping.decode()
 
+                println('ping')
+                println(ping.ping_id)
+                println(ping.p.ip)
+                println(ping.p.port)
+
                 mut pong := UnConnectedPongPacket {
                     p: Packet {
                         buffer: new_bytebuffer([ byte(0) ; 35+40].data, u32(35 + 40))
@@ -49,6 +54,8 @@ fn (r mut VRakLib) run() {
                 }
                 pong.encode()
 
+                println('pong')
+                println(pong.ping_id)
                 println(pong.p.ip)
                 println(pong.p.port)
 
