@@ -29,8 +29,8 @@ fn (r VRakLib) run() {
             pid := packet.buffer.buffer[0]
 
             if pid == UnConnectedPong || pid == UnConnectedPong2 {
-                mut ping := UnConnectedPingPacket{
-                    p: Packet{ // Is this the best?
+                mut ping := UnConnectedPingPacket {
+                    p: Packet { // Is this the best?
                         buffer: new_bytebuffer(packet.buffer.buffer, packet.buffer.length)
                         ip: packet.ip
                         port: packet.port
@@ -38,7 +38,10 @@ fn (r VRakLib) run() {
                 }
                 ping.decode()
 
-                mut pong := UnConnectedPongPacket{
+                mut pong := UnConnectedPongPacket {
+                    p: Packet {
+                        buffer: new_bytebuffer([ byte(0) ; 35+40].data, u32(35 + 40))
+                    }
                     server_id: 123456789
                     ping_id: i64(ping.ping_id)
                     str: 'MCPE;Minecraft V Server!;34;0.12.2;0;100'

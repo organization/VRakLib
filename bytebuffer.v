@@ -34,6 +34,7 @@ pub fn (b mut ByteBuffer) put_bytes(bytes byteptr, size int) {
         for i < size {
             b.buffer[b.position] = bytes[i]
             b.position++
+            i++
         }
     }
 }
@@ -52,7 +53,7 @@ pub fn (b mut ByteBuffer) put_bool(v bool) {
 
 pub fn (b mut ByteBuffer) put_short(v i16) {
     assert b.position + u32(sizeof(i16)) <= b.length
-    if b.get_system_endianness() != endianness {
+    if b.get_system_endianness() != b.endianness {
         
     }
     b.buffer[b.position] = byte(v & i16(0xFF))
