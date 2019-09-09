@@ -18,11 +18,10 @@ pub fn (r mut VRakLib) start() {
     socket := create_socket(r.ip, int(r.port)) or { panic(err) }
     r.socket = socket
 
-    rr := *r
-    go rr.run()
+    go r.run()
 }
 
-fn (r VRakLib) run() {
+fn (r mut VRakLib) run() {
     for {
         if r.running {
             packet := r.socket.receive() or { continue }
@@ -41,6 +40,8 @@ fn (r VRakLib) run() {
                 mut pong := UnConnectedPongPacket {
                     p: Packet {
                         buffer: new_bytebuffer([ byte(0) ; 35+40].data, u32(35 + 40))
+                        ip: ping.p.ip
+                        port: ping.p.port
                     }
                     server_id: 123456789
                     ping_id: i64(ping.ping_id)
@@ -48,8 +49,8 @@ fn (r VRakLib) run() {
                 }
                 pong.encode()
 
-                pong.p.ip = ping.p.ip
-                pong.p.port = ping.p.port
+                println(pong.p.ip)
+                println(pong.p.port)
 
                 r.socket.send(pong, pong.p)
             } else if pid == ConnectionRequest1 {
