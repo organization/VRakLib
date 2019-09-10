@@ -36,23 +36,6 @@ fn (r mut VRakLib) run() {
                     }
                 }
                 ping.decode()
-                
-                /*ping.p.buffer.position = u32(1)
-
-                println('s')
-                mut i := 0
-                bytes := ping.p.buffer.get_bytes(8)
-                for i < 8 {
-                    println(int(bytes[i]).hex())
-                    i++
-                }
-                println('e')*/
-
-                println('ping')
-                println(ping.ping_id)
-                println(ping.client_id)
-                //println(ping.p.ip)
-                //println(ping.p.port)
 
                 title := 'MCPE;Minecraft V Server!;361;1.12.0;0;100;123456789;Test;Survival;'
                 len := 35 + title.len
@@ -67,11 +50,6 @@ fn (r mut VRakLib) run() {
                     str: title
                 }
                 pong.encode()
-
-                //println('pong')
-                //println(pong.ping_id)
-                //println(pong.p.ip)
-                //println(pong.p.port)
 
                 r.socket.send(pong, pong.p)
             } else if pid == ConnectionRequest1 {

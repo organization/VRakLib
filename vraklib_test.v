@@ -45,24 +45,44 @@ fn test_bytebuffer() {
 
     v64 = vraklib.swap64(v64)
     print_bit64(v64)
+
+    mut b := []byte
+    b << byte(0x00)
+    b << byte(0x00)
+    b << byte(0x00)
+    b << byte(0x00)
+    b << byte(0x07)
+    b << byte(0x5b)
+    b << byte(0xcd)
+    b << byte(0x15)
+
+    v := i64(i64(b[0]) << i64(56)) |
+        i64(i64(b[1]) << i64(48)) |
+        i64(i64(b[2]) << i64(40)) |
+        i64(i64(b[3]) << i64(32)) |
+        i64(i64(b[4]) << i64(24)) |
+        i64(i64(b[5]) << i64(16)) |
+        i64(i64(b[6]) << i64(8)) |
+        i64(b[7])
+    println(v)
 }
 
 fn print_bit32(v u32) {
-    b1 := byte(v)
-    b2 := byte(v >> u32(8))
-    b3 := byte(v >> u32(16))
-    b4 := byte(v >> u32(24))
+    b1 := byte(v >> u32(24))
+    b2 := byte(v >> u32(16))
+    b3 := byte(v >> u32(8))
+    b4 := byte(v)
     println('${b1} ${b2} ${b3} ${b4}')
 }
 
 fn print_bit64(v u64) {
-    b1 := byte(v)
-    b2 := byte(v >> u64(8))
-    b3 := byte(v >> u64(16))
-    b4 := byte(v >> u64(24))
-    b5 := byte(v >> u64(32))
-    b6 := byte(v >> u64(40))
-    b7 := byte(v >> u64(48))
-    b8 := byte(v >> u64(56))
+    b1 := byte(v >> u64(56))
+    b2 := byte(v >> u64(48))
+    b3 := byte(v >> u64(40))
+    b4 := byte(v >> u64(32))
+    b5 := byte(v >> u64(24))
+    b6 := byte(v >> u64(16))
+    b7 := byte(v >> u64(8))
+    b8 := byte(v)
     println('${b1} ${b2} ${b3} ${b4} ${b5} ${b6} ${b7} ${b8}')
 }

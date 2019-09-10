@@ -116,6 +116,7 @@ fn (s UdpSocket) send(packet DataPacketHandler, p Packet) ?int {
     mut addr := C.sockaddr_in{}
     addr.sin_family = C.AF_INET
     addr.sin_port = p.port
+    C.inet_pton(C.AF_INET, p.ip.str, &addr.sin_addr)
 
     buffer := p.buffer.buffer
     length := p.buffer.length

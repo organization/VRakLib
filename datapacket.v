@@ -36,7 +36,7 @@ mut:
     p Packet
 
     ping_id i64
-    client_id i64
+    client_id u64
 }
 
 struct Replay1Packet {
@@ -69,10 +69,10 @@ fn (u UnConnectedPongPacket) decode() {}
 
 // UnConnectedPing
 fn (u mut UnConnectedPingPacket) decode() {
-    u.p.buffer.position += u32(1) // Packet ID
+    u.p.buffer.get_byte() // Packet ID
     u.ping_id = u.p.buffer.get_long()
     u.p.buffer.get_bytes(RaknetMagicLength)
-    u.client_id = u.p.buffer.get_long()
+    u.client_id = u.p.buffer.get_ulong()
 }
 
 // Replay1
@@ -89,7 +89,8 @@ fn (r Replay1Packet) decode () {}
 fn (r mut Request1Packet) encode() {}
 
 fn (r mut Request1Packet) decode() {
-    r.p.buffer.position += u32(17) // Skip Raknet Magic And Packet ID
+    r.p.buffer.get_byte() // Packet ID
+    r.p.buffer.get_bytes(RaknetMagicLength)
     r.version = r.p.buffer.get_byte()
     r.mtu_size = i16(r.p.buffer.length - r.p.buffer.position)
 }
