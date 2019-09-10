@@ -53,11 +53,55 @@ fn (r mut VRakLib) run() {
 
                 r.socket.send(pong, pong.p)
             } else if pid == ConnectionRequest1 {
-                // Request1
+                mut request := Request1Packet {
+                    p: Packet {
+                        buffer: new_bytebuffer(packet.buffer.buffer, packet.buffer.length)
+                        ip: packet.ip
+                        port: packet.port
+                    }
+                }
+                request.decode()
+                
+                mut reply := Reply1Packet {
+                    p: Packet {
+                        buffer: new_bytebuffer([ byte(0) ; 28].data, u32(28))
+                        ip: request.p.ip
+                        port: request.p.port
+                    }
+                    security: true
+                    server_id: 123456789
+                    mtu_size: request.mtu_size
+                }
+                reply.encode()
+
+                r.socket.send(reply, reply.p)
             } else if pid == ConnectionRequest2 {
-                // Request2
+                mut request := Request2Packet {
+                    p: Packet {
+                        buffer: new_bytebuffer(packet.buffer.buffer, packet.buffer.length)
+                        ip: packet.ip
+                        port: packet.port
+                    }
+                }
+                request.decode()
+
+                mut reply := Reply2Packet {
+                    p: Packet {
+                        buffer: new_bytebuffer([ byte(0) ; 30].data, u32(30))
+                        ip: request.p.ip
+                        port: request.p.port
+                    }
+                    server_id: 123456789
+                    rport: request.rport
+                    mtu_size: request.mtu_size
+                    security: request.security
+                }
+                reply.encode()
+
+                r.socket.send(reply, reply.p)
             } else {
                 // custom receive packet
+                println('$pid custom receive packet')
             }
         }
     }

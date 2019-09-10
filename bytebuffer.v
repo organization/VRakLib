@@ -46,7 +46,7 @@ pub fn (b mut ByteBuffer) put_char(c i8) {
 }
 
 pub fn (b mut ByteBuffer) put_bool(v bool) {
-    assert b.position + u32(sizeof(bool)) <= b.length
+    assert b.position + u32(1) <= b.length
     b.buffer[b.position] = if v { 0x01 } else { 0x00 }
     b.position++
 }
@@ -233,7 +233,7 @@ pub fn (b mut ByteBuffer) get_char() i8 {
 }
 
 pub fn (b mut ByteBuffer) get_bool() bool {
-    assert b.position + u32(sizeof(bool)) <= b.length
+    assert b.position + u32(1) <= b.length
     v := if b.buffer[b.position] == 0x01 { true } else { false }
     b.position++
     return v

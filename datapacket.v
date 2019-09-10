@@ -39,21 +39,42 @@ mut:
     client_id u64
 }
 
-struct Replay1Packet {
-mut:
-    p Packet
-
-    security bool
-    server_id i64
-    mtu_size u16
-}
-
 struct Request1Packet {
 mut:
     p Packet
 
     version byte
     mtu_size i16
+}
+
+struct Reply1Packet {
+mut:
+    p Packet
+
+    security bool
+    server_id i64
+    mtu_size i16
+}
+
+struct Request2Packet {
+mut:
+    p Packet
+
+    security bool
+    cookie int
+    rport u16
+    mtu_size i16
+    client_id u64
+}
+
+struct Reply2Packet {
+mut:
+    p Packet
+
+    server_id i64
+    rport u16
+    mtu_size i16
+    security bool
 }
 
 // UnConnectedPong
@@ -75,16 +96,6 @@ fn (u mut UnConnectedPingPacket) decode() {
     u.client_id = u.p.buffer.get_ulong()
 }
 
-// Replay1
-fn (r mut Replay1Packet) encode() {
-    r.p.buffer.put_byte(ConnectionReply1)
-    r.p.buffer.put_bytes(get_packet_magic().data, RaknetMagicLength)
-    r.p.buffer.put_long(r.server_id)
-    r.p.buffer.put_ushort(r.mtu_size)
-}
-
-fn (r Replay1Packet) decode () {}
-
 // Request1
 fn (r mut Request1Packet) encode() {}
 
@@ -94,3 +105,38 @@ fn (r mut Request1Packet) decode() {
     r.version = r.p.buffer.get_byte()
     r.mtu_size = i16(r.p.buffer.length - r.p.buffer.position)
 }
+
+// Reply1
+fn (r mut Reply1Packet) encode() {
+    r.p.buffer.put_byte(ConnectionReply1)
+    r.p.buffer.put_bytes(get_packet_magic().data, RaknetMagicLength)
+    r.p.buffer.put_long(r.server_id)
+    r.p.buffer.put_bool(r.security)
+    r.p.buffer.put_short(r.mtu_size)
+}
+
+fn (r Reply1Packet) decode () {}
+
+// Request2
+fn (r mut Request2Packet) encode() {}
+
+fn (r mut Request2Packet) decode() {
+    r.p.buffer.get_byte() // Packet ID
+    r.security = r.p.buffer.get_bool()
+    r.cookie = r.p.buffer.get_int()
+    r.rport = r.p.buffer.get_ushort()
+    r.mtu_size = r.p.buffer.get_short()
+    r.client_id = r.p.buffer.get_ulong()
+}
+
+// Reply2
+fn (r mut Reply2Packet) encode() {
+    r.p.buffer.put_byte(ConnectionReply2)
+    r.p.buffer.put_bytes(get_packet_magic().data, RaknetMagicLength)
+    r.p.buffer.put_long(r.server_id)
+    r.p.buffer.put_ushort(r.rport)
+    r.p.buffer.put_short(r.mtu_size)
+    r.p.buffer.put_bool(r.security)
+}
+
+fn (r Reply2Packet) decode () {}
