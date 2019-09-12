@@ -5,19 +5,13 @@ const (
 )
 
 const (
-    Unreliable = 0x00
-    UnreliableSequenced = 0x01
-    Reliable = 0x02
-    ReliableOrdered = 0x03
-    ReliableSequenced = 0x04
-    UnreliableWithAckReceipt = 0x05
-    ReliableWithAckReceipt = 0x06
-    ReliableOrderedWithAckReceipt = 0x07
-)
+    BitflagValid = 0x80
+    BitflagAck = 0x40
+    BitflagNak = 0x20
 
-const (
-    PriorityNormal = 0
-    PriorityImmediate = 1
+    BitflagPacketPair = 0x10
+    BitflagContinuousSend = 0x08
+    BitflagNeedsBAndAs = 0x04
 )
 
 struct Packet {
@@ -173,7 +167,7 @@ fn (c mut Datagram) encode() {
     c.p.buffer.length = c.get_total_length()
     c.p.buffer.buffer = [byte(0) ; int(c.get_total_length())].data
 
-    c.p.buffer.put_byte(byte(0x80) | c.packet_id)
+    c.p.buffer.put_byte(byte(BitflagValid) | c.packet_id)
     c.p.buffer.put_ltriad(int(c.sequence_number))
     for internal_packet in c.packets {
         packet := internal_packet.to_binary()

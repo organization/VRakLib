@@ -1,7 +1,5 @@
 module vraklib
 
-import time
-
 struct SessionManager {
 mut:
     socket UdpSocket
@@ -11,13 +9,6 @@ mut:
     shutdown bool
 
     start_time_ms int
-}
-
-struct Session {
-mut:
-    session_manager SessionManager
-    ip string
-    port int
 }
 
 fn new_session_manager(socket UdpSocket) &SessionManager {
@@ -38,22 +29,32 @@ fn (s mut SessionManager) run() {
             s.receive_packet()
         }
 
-        for session in s.sessions {
-            session.update()
+        for i, session in s.sessions {
+            s.sessions[i].update()
         }
     }
 }
 
 fn (s mut SessionManager) receive_packet() {
     packet := s.socket.receive() or { return }
+    pid := packet.buffer.buffer[0]
 
     if s.session_exists(packet.ip, packet.port) {
         mut session := s.get_session_by_address(packet.ip, packet.port)
 
-        datagram := Datagram { p: new_packet_from_packet(packet) }
-        session.handle_packet(datagram)
+        if pid & BitflagValid != 0 {
+            if pid & BitflagAck != 0 {
+                // ACK
+                println('ack')
+            } else if pid & BitflagNak != 0 {
+                // NACK
+                println('nack')
+            } else {
+                datagram := Datagram { p: new_packet_from_packet(packet) }
+                session.handle_packet(datagram)
+            }
+        }
     } else {
-        pid := packet.buffer.buffer[0]
         if pid == UnConnectedPong || pid == UnConnectedPong2 {
             mut ping := UnConnectedPingPacket { p: new_packet_from_packet(packet) }
             ping.decode()
@@ -140,52 +141,6 @@ fn (s mut SessionManager) create_session(ip string, port int) &Session {
     return &session
 }
 
-fn (s Session) update() {
-
-}
-
-fn (s Session) queue_connected_packet(packet Packet, reliability byte, order_channel int, flag byte) {
-    mut encapsulated := EncapsulatedPacket {
-        buffer: packet.buffer.buffer
-        length: u16(packet.buffer.length)
-        reliability: reliability
-        order_channel: order_channel
-    }
-    s.add_encapsulated_to_queue(encapsulated, flag)
-}
-
-fn (s Session) add_encapsulated_to_queue(packet EncapsulatedPacket, flags byte) {
-    
-}
-
-fn (s mut Session) handle_packet(packet Datagram) {
-    mut p := packet
-    p.decode()
-
-    for pp in p.packets {
-        s.handle_encapsulated_packet(pp)
-    }
-}
-
-fn (s mut Session) handle_encapsulated_packet(packet EncapsulatedPacket) {
-    pid := packet.buffer[0]
-
-    if pid < UserPacketEnum {
-        if pid == ConnectionRequest {
-            mut connection := ConnectionRequestPacket { p: new_packet(packet.buffer, u32(packet.length)) }
-            connection.decode()
-
-            mut accepted := ConnectionRequestAcceptedPacket {
-                p: new_packet([byte(0) ; 30].data, u32(30))
-                ping_time: connection.ping_time
-                pong_time: s.session_manager.get_raknet_time_ms()
-            }
-            accepted.encode()
-            accepted.p.ip = connection.p.ip
-            accepted.p.port = connection.p.port
-
-            s.queue_connected_packet(accepted.p, Unreliable, 0, PriorityImmediate)
-        }
-    }
-    println(pid)
+fn (s SessionManager) send_packet(packet DataPacketHandler, p Packet) {
+    s.socket.send(packet, p)
 }
