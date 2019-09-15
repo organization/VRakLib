@@ -1,5 +1,10 @@
 module vraklib
 
+struct TmpMapEncapsulatedPacket {
+mut:
+    m map[string]EncapsulatedPacket
+}
+
 struct Session {
 mut:
     session_manager SessionManager
@@ -9,9 +14,9 @@ mut:
     ack_queue map[string]u32
     nack_queue map[string]u32
 
-    split_packets map[string]map[string]EncapsulatedPacket
+    split_packets map[string]TmpMapEncapsulatedPacket
 
-    need_ack map[string]map[string]int
+    need_ack [][]int
 
     send_queue_data Datagram
 
@@ -28,16 +33,16 @@ mut:
 
     message_index int
 
-    send_ordered_index map[string]int
-    send_sequenced_index map[string]int
-    receive_ordered_index map[string]int
-    receive_sequenced_highest_index map[string]int
-    receive_ordered_packets map[string]map[string]EncapsulatedPacket
+    send_ordered_index []int
+    send_sequenced_index []int
+    receive_ordered_index []int
+    receive_sequenced_highest_index []int
+    receive_ordered_packets [][]EncapsulatedPacket
 }
 
 fn (s mut Session) update() {
     diff := s.highest_seq_number - s.window_start + u32(1)
-    assert diff >= u32(0)
+    //assert diff >= u32(0)
 
     if diff > u32(0) {
         s.window_start += diff
@@ -54,10 +59,10 @@ fn (s mut Session) update() {
         //s.nack_queue = map[string]int{}
     }
 
-    if s.need_ack.size > 0 {
+    if s.need_ack.len > 0 {
         for i, ack in s.need_ack {
-            if ack.size == 0 {
-                s.need_ack.delete(i)
+            if ack.len == 0 {
+                s.need_ack[i]
                 //s.session_manager.notify_ack(s, i)
             }
         }
@@ -102,7 +107,8 @@ fn (s mut Session) add_to_queue(packet EncapsulatedPacket, flags byte) {
     mut p := packet
     priority := flags & 0x07
     if p.need_ack && p.message_index != -1 {
-        s.need_ack[p.identifier_ack.str()][p.message_index.str()] = p.message_index
+        mut arr := s.need_ack[p.identifier_ack]
+        arr[p.message_index] = p.message_index
     }
 
     length := s.send_queue_data.get_total_length()
@@ -114,7 +120,7 @@ fn (s mut Session) add_to_queue(packet EncapsulatedPacket, flags byte) {
         s.send_queue_data.packets << p
         p.need_ack = false
     } else {
-        s.send_queue_data.packets << p.to_binary()
+        //s.send_queue_data.packets << p.to_binary()
     }
 
     if priority == PriorityImmediate {
@@ -125,17 +131,18 @@ fn (s mut Session) add_to_queue(packet EncapsulatedPacket, flags byte) {
 fn (s mut Session) add_encapsulated_to_queue(packet EncapsulatedPacket, flags byte) {
     mut p := packet
     p.need_ack = (flags & 0x09) != 0
-    if p.need_ack {
-        s.need_ack[p.identifier_ack.str()] = map[string]int
-    }
+    println(p.need_ack)
+    //if p.need_ack {
+    //    s.need_ack[p.identifier_ack] = map[string]int
+    //}
 
     if reliability_is_ordered(p.reliability) {
-        p.order_index = s.send_ordered_index[p.order_channel.str()]
-        s.send_ordered_index[p.order_channel.str()] += 1
+        p.order_index = s.send_ordered_index[p.order_channel]
+        s.send_ordered_index[p.order_channel] += 1
     } else if reliability_is_sequenced(p.reliability) {
-        p.order_index = s.send_ordered_index[p.order_channel.str()]
-        p.sequence_index = s.send_sequenced_index[p.order_channel.str()]
-        s.send_sequenced_index[p.order_channel.str()] += 1
+        p.order_index = s.send_ordered_index[p.order_channel]
+        p.sequence_index = s.send_sequenced_index[p.order_channel]
+        s.send_sequenced_index[p.order_channel] += 1
     }
 
     //max_size := mtu_size
@@ -156,19 +163,23 @@ fn (s mut Session) handle_packet(packet Datagram) {
 
     if p.sequence_number < s.window_start ||
         p.sequence_number > s.window_end ||
-        s.ack_queue.exists(p.sequence_number.str()) {
+        p.sequence_number.str() in s.ack_queue {
             // Received duplicate or out-of-window packet
             return
     }
-    s.nack_queue.delete(p.sequence_number.str())
+
+    if p.sequence_number.str() in s.nack_queue {
+       s.nack_queue.delete(p.sequence_number.str())
+    }
     s.ack_queue[p.sequence_number.str()] = p.sequence_number
+
     if s.highest_seq_number < p.sequence_number {
         s.highest_seq_number = p.sequence_number
     }
 
     if p.sequence_number == s.window_start {
         for {
-            if s.ack_queue.exists(s.window_start.str()) {
+            if s.window_start.str() in s.ack_queue {
                 s.window_end++
                 s.window_start++
             } else {
@@ -178,7 +189,7 @@ fn (s mut Session) handle_packet(packet Datagram) {
     } else if p.sequence_number > s.window_start {
         mut i := s.window_start
         for i < p.sequence_number {
-            if !s.ack_queue.exists(i.str()) {
+            if !(i.str() in s.ack_queue) {
                 s.nack_queue[i.str()] = i
             }
             i++
@@ -201,20 +212,22 @@ fn (s mut Session) handle_split(packet EncapsulatedPacket) ?EncapsulatedPacket {
             return error('Invalid split packet part')
     }
 
-    if !s.split_packets.exists(packet.split_id.str()) {
-        if s.split_packets.size >= 128 ||
-            packet.split_index >= 128 ||
-            packet.split_index < 0 {
-                return error('Invalid split packet part')
+    if !(packet.split_id.str() in s.split_packets) {
+        if s.split_packets.size >= 128 {
+            return error('Invalid split packet part')
         }
+        mut tmp := TmpMapEncapsulatedPacket{}
+        tmp.m[packet.split_index.str()] = packet
+        s.split_packets[packet.split_id.str()] = tmp
     } else {
-        s.split_packets[packet.split_id.str()][packet.split_index.str()] = packet
+        mut tmp := s.split_packets[packet.split_id.str()]
+        tmp.m[packet.split_index.str()] = packet
     }
 
-    if s.split_packets[packet.split_id.str()].size == packet.split_count {
-        p := EncapsulatedPacket {}
+    if s.split_packets[packet.split_id.str()].m.size == packet.split_count {
+        mut p := EncapsulatedPacket {}
         
-        buffer := []byte
+        mut buffer := []byte
 
         p.reliability = packet.reliability
         p.message_index = packet.message_index
@@ -224,12 +237,13 @@ fn (s mut Session) handle_split(packet EncapsulatedPacket) ?EncapsulatedPacket {
 
         mut i := 0
         for i < packet.split_count {
-            buffer << s.split_packets[packet.split_id.str()][i.str()].buffer
+            d := s.split_packets[packet.split_id.str()]
+            buffer << d.m[i.str()].buffer
             i++
         }
 
         p.buffer = buffer.data
-        p.length = buffer.len
+        p.length = u16(buffer.len)
         s.split_packets.delete(packet.split_id.str())
         return p
     }
@@ -241,14 +255,14 @@ fn (s mut Session) handle_encapsulated_packet(packet EncapsulatedPacket) {
     if p.message_index != -1 {
         if p.message_index < s.reliable_window_start ||
             p.message_index > s.reliable_window_end ||
-            s.reliable_window.exists(p.message_index.str()) {
+            p.message_index.str() in s.reliable_window {
                 return
             }
         s.reliable_window[p.message_index.str()] = true
 
         if p.message_index == s.reliable_window_start {
             for {
-                if s.reliable_window.exists(s.reliable_window_start.str()) {
+                if s.reliable_window_start.str() in s.reliable_window {
                     s.reliable_window.delete(s.reliable_window_start.str())
                     s.reliable_window_end++
                     s.reliable_window_start++
@@ -272,36 +286,41 @@ fn (s mut Session) handle_encapsulated_packet(packet EncapsulatedPacket) {
     }
 
     if reliability_is_sequenced(packet.reliability) {
-        if packet.sequence_index < s.receive_sequenced_highest_index[packet.order_channel.str()] ||
-            packet.order_index < s.receive_ordered_index[packet.order_channel.str()] {
+        if packet.sequence_index < s.receive_sequenced_highest_index[packet.order_channel] ||
+            packet.order_index < s.receive_ordered_index[packet.order_channel] {
                 // too old sequenced packet
                 return
         }
 
-        s.receive_sequenced_highest_index[packet.order_channel.str()] = packet.sequence_index + 1
+        s.receive_sequenced_highest_index[packet.order_channel] = packet.sequence_index + 1
         s.handle_encapsulated_packet_route(packet)
     } else if reliability_is_ordered(packet.reliability) {
-        if packet.order_index == s.receive_ordered_index[packet.order_channel.str()] {
-            s.receive_sequenced_highest_index[packet.order_index.str()] = 0
-            s.receive_ordered_index[packet.order_channel.str()] = packet.order_index + 1
+        if packet.order_index == s.receive_ordered_index[packet.order_channel] {
+            s.receive_sequenced_highest_index[packet.order_index] = 0
+            s.receive_ordered_index[packet.order_channel] = packet.order_index + 1
 
             s.handle_encapsulated_packet_route(packet)
-            mut i := s.receive_ordered_index[packet.order_channel.str()]
+            mut i := s.receive_ordered_index[packet.order_channel]
             for {
-                if !s.receive_ordered_packets[packet.order_channel.str()].exists(i.str()) {
-                    break
-                }
-                s.handle_encapsulated_packet_route(s.receive_ordered_packets[packet.order_channel.str()][i.str()])
-                s.receive_ordered_packets[packet.order_channel.str()].delete(i.str())
+                d := s.receive_ordered_packets[packet.order_channel]
+                //if !d[i] {
+                //    break
+                //}
+                dd := s.receive_ordered_packets[packet.order_channel]
+                s.handle_encapsulated_packet_route(dd[i])
+                s.receive_ordered_packets[packet.order_channel].delete(i)
                 i++
             }
-        } else if {
-            s.receive_ordered_packets[packet.order_channel.str()][packet.order_index.str()] = packet
+            s.receive_ordered_index[packet.order_channel] = i
+        } else if packet.order_index > s.receive_ordered_index[packet.order_channel] {
+            mut d := s.receive_ordered_packets[packet.order_channel]
+            d[packet.order_index] = packet
         } else {
             // duplicate/alredy receive packet
         }
     } else {
         // not ordered or sequenced
+        s.handle_encapsulated_packet_route(packet)
     }
 }
 
@@ -325,5 +344,4 @@ fn (s mut Session) handle_encapsulated_packet_route(packet EncapsulatedPacket) {
             s.queue_connected_packet(accepted.p, Unreliable, 0, PriorityImmediate)
         }
     }
-    println(pid)
 }

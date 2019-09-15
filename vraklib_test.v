@@ -65,6 +65,14 @@ fn test_bytebuffer() {
         i64(i64(b[6]) << i64(8)) |
         i64(b[7])
     println(v)
+
+    mut g := []byte
+    g << byte(0x00)
+    g << byte(0x90)
+
+    h := u16(u16(g[0]) << u16(8)) |
+        u16(g[1])
+    println(h)
 }
 
 fn print_bit32(v u32) {
@@ -85,4 +93,33 @@ fn print_bit64(v u64) {
     b7 := byte(v >> u64(8))
     b8 := byte(v)
     println('${b1} ${b2} ${b3} ${b4} ${b5} ${b6} ${b7} ${b8}')
+}
+
+struct Test {
+mut:
+    m map[string]int
+}
+
+fn test_array() {
+    // mut maptest := map[string]Test
+    // maptest['test'] = Test{}
+    // mut st := maptest['test']
+    // st.m['test'] = 123
+    // maptest['test'] = st
+
+    // mut maptest := {'1' : Test{}}
+    // mut st := maptest['1']
+    // st.m['2'] = 12345
+    // maptest['1'] = st
+
+    mut maptest := {'1' : Test{}}
+    mut st := maptest['1']
+    st.m['2'] = 12345
+    st.m['3'] = 4564
+    st.m = {'2' : 12345}
+    maptest['1'] = st
+
+    println(maptest.keys())
+    println(maptest['1'].m.keys())
+    println(maptest['1'].m['2'])
 }

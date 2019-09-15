@@ -1,5 +1,7 @@
 module vraklib
 
+import math
+
 const (
     RaknetMagicLength = 16
 )
@@ -81,39 +83,33 @@ fn encapsulated_packet_from_binary(p Packet) []EncapsulatedPacket {
         internal_packet.reliability = (flags & 0xE0) >> 5
         internal_packet.has_split = (flags & 0x10) > 0
 
-        s := packet.buffer.get_ushort()
-        internal_packet.length = u16((s + u16(7)) >> u16(3))
+        length := math.ceil(f32(packet.buffer.get_ushort()) / f32(8))
 
-        if internal_packet.reliability == Reliable ||
-            internal_packet.reliability == ReliableOrdered ||
-            internal_packet.reliability == ReliableSequenced ||
-            internal_packet.reliability == ReliableWithAckReceipt ||
-            internal_packet.reliability == ReliableOrderedWithAckReceipt {
+        if internal_packet.reliability > Unreliable {
+            if reliability_is_reliable(internal_packet.reliability) {
                 internal_packet.message_index = packet.buffer.get_ltriad()
-        }
-
-        if internal_packet.reliability == UnreliableSequenced ||
-            internal_packet.reliability == ReliableOrdered ||
-            internal_packet.reliability == ReliableSequenced ||
-            internal_packet.reliability == ReliableOrderedWithAckReceipt {
+            }
+            if reliability_is_sequenced(internal_packet.reliability) {
+                internal_packet.sequence_index = packet.buffer.get_ltriad()
+            }
+            if reliability_is_sequenced_or_ordered(internal_packet.reliability) {
                 internal_packet.order_index = packet.buffer.get_ltriad()
                 internal_packet.order_channel = packet.buffer.get_byte()
+            }
         }
-
         if internal_packet.has_split {
             internal_packet.split_count == packet.buffer.get_int()
             internal_packet.split_id == u16(packet.buffer.get_short())
             internal_packet.split_index == packet.buffer.get_int()
         }
-
-        internal_packet.buffer = packet.buffer.get_bytes(int(internal_packet.length))
+        internal_packet.buffer = packet.buffer.get_bytes(int(length))
         packets << internal_packet
     }
     return packets
 }
 
 fn (p EncapsulatedPacket) to_binary() Packet {
-    mut packet := Packet{ buffer: new_bytebuffer([byte(0) ; int(p.get_length())].data, p.get_length()) }
+    mut packet := Packet{ buffer: new_bytebuffer([byte(0)].repeat(int(p.get_length())).data, p.get_length()) }
     packet.buffer.put_byte(byte(p.reliability << 5 | (if p.has_split { 0x01 } else { 0x00 })))
     packet.buffer.put_ushort(u16(p.length << u16(3)))
 
@@ -165,7 +161,7 @@ fn (c mut Datagram) decode() {
 
 fn (c mut Datagram) encode() {
     c.p.buffer.length = c.get_total_length()
-    c.p.buffer.buffer = [byte(0) ; int(c.get_total_length())].data
+    c.p.buffer.buffer = [byte(0)].repeat(int(c.get_total_length())).data
 
     c.p.buffer.put_byte(byte(BitflagValid) | c.packet_id)
     c.p.buffer.put_ltriad(int(c.sequence_number))

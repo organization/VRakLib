@@ -42,11 +42,11 @@ fn (s mut SessionManager) receive_packet() {
     if s.session_exists(packet.ip, packet.port) {
         mut session := s.get_session_by_address(packet.ip, packet.port)
 
-        if pid & BitflagValid != 0 {
-            if pid & BitflagAck != 0 {
+        if (pid & BitflagValid) != 0 {
+            if (pid & BitflagAck) != 0 {
                 // ACK
                 println('ack')
-            } else if pid & BitflagNak != 0 {
+            } else if (pid & BitflagNak) != 0 {
                 // NACK
                 println('nack')
             } else {
@@ -135,6 +135,14 @@ fn (s mut SessionManager) create_session(ip string, port int) &Session {
         session_manager: s
         ip: ip
         port: port
+
+        send_ordered_index: [0; 32]
+        send_sequenced_index: [0; 32]
+
+        receive_ordered_index: [0; 32]
+        receive_sequenced_highest_index: [0; 32]
+
+        receive_ordered_packets: [[]EncapsulatedPacket; 32]
     }
     s.sessions << session
     s.session_by_address['$ip:${port.str()}'] = session
