@@ -333,7 +333,7 @@ fn (s mut Session) handle_encapsulated_packet_route(packet EncapsulatedPacket) {
             connection.decode()
 
             mut accepted := ConnectionRequestAcceptedPacket {
-                p: new_packet([byte(0) ; 96].data, u32(96))
+                p: new_packet([byte(0)].repeat(96).data, u32(96))
                 ping_time: connection.ping_time
                 pong_time: s.session_manager.get_raknet_time_ms()
             }

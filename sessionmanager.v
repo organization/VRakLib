@@ -62,7 +62,7 @@ fn (s mut SessionManager) receive_packet() {
             title := 'MCPE;Minecraft V Server!;361;1.12.0;0;100;123456789;Test;Survival;'
             len := 35 + title.len
             mut pong := UnConnectedPongPacket {
-                p: new_packet([byte(0) ; len].data, u32(len))
+                p: new_packet([byte(0)].repeat(len).data, u32(len))
                 server_id: 123456789
                 ping_id: ping.ping_id
                 str: title
@@ -78,7 +78,7 @@ fn (s mut SessionManager) receive_packet() {
             
             if request.version != 9 {
                 mut incompatible := IncompatibleProtocolVersionPacket {
-                    p: new_packet([byte(0) ; 26].data, u32(26))
+                    p: new_packet([byte(0)].repeat(26).data, u32(26))
                     version: 9
                     server_id: 123456789
                 }
@@ -91,7 +91,7 @@ fn (s mut SessionManager) receive_packet() {
             }
 
             mut reply := Reply1Packet {
-                p: new_packet([byte(0) ; 28].data, u32(28))
+                p: new_packet([byte(0)].repeat(28).data, u32(28))
                 security: true
                 server_id: 123456789
                 mtu_size: request.mtu_size
@@ -106,7 +106,7 @@ fn (s mut SessionManager) receive_packet() {
             request.decode()
 
             mut reply := Reply2Packet {
-                p: new_packet([byte(0) ; 30].data, u32(30))
+                p: new_packet([byte(0)].repeat(30).data, u32(30))
                 server_id: 123456789
                 rport: request.rport
                 mtu_size: request.mtu_size
@@ -136,13 +136,13 @@ fn (s mut SessionManager) create_session(ip string, port int) &Session {
         ip: ip
         port: port
 
-        send_ordered_index: [0; 32]
-        send_sequenced_index: [0; 32]
+        send_ordered_index: [0].repeat(32)
+        send_sequenced_index: [0].repeat(32)
 
-        receive_ordered_index: [0; 32]
-        receive_sequenced_highest_index: [0; 32]
+        receive_ordered_index: [0].repeat(32)
+        receive_sequenced_highest_index: [0].repeat(32)
 
-        receive_ordered_packets: [[]EncapsulatedPacket; 32]
+        receive_ordered_packets: [[]EncapsulatedPacket].repeat(32)
     }
     s.sessions << session
     s.session_by_address['$ip:${port.str()}'] = session
