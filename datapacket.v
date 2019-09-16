@@ -108,6 +108,16 @@ mut:
     pong_time i64
 }
 
+struct NewIncomingConnectionPacket {
+mut:
+    p Packet
+
+    address internet_address
+    system_addresses []internet_address
+    ping_time i64
+    pong_time i64
+}
+
 // UnConnectedPong
 fn (u mut UnConnectedPongPacket) encode() {
     u.p.buffer.put_byte(UnConnectedPing)

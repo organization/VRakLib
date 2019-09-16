@@ -1,5 +1,21 @@
 module vraklib
 
+const (
+    MaxSplitSize = 128
+    MaxSplitCount = 4
+    ChannelCount = 32
+    
+    MinMtuSize = 400
+    window_size = 2048 //should be mutable
+)
+
+enum State {
+    connecting
+    connected
+    disconnecting
+    disconnected
+}
+
 struct TmpMapEncapsulatedPacket {
 mut:
     m map[string]EncapsulatedPacket
@@ -7,30 +23,6 @@ mut:
 
 struct Session {
 mut:
-    session_manager SessionManager
-    ip string
-    port int
-
-    ack_queue map[string]u32
-    nack_queue map[string]u32
-
-    split_packets map[string]TmpMapEncapsulatedPacket
-
-    need_ack [][]int
-
-    send_queue_data Datagram
-
-    window_start u32
-    window_end u32
-    highest_seq_number u32
-
-    send_seq_number u32
-
-    reliable_window_start int
-    reliable_window_end int
-
-    reliable_window map[string]bool
-
     message_index int
 
     send_ordered_index []int
@@ -38,6 +30,53 @@ mut:
     receive_ordered_index []int
     receive_sequenced_highest_index []int
     receive_ordered_packets [][]EncapsulatedPacket
+
+    session_manager SessionManager
+
+    // logger logger
+
+    address InternetAddress
+
+    state State // connecting
+
+    mtu_size int
+    id int
+    splid_id int // 0
+    
+    send_seq_number u32 // 0
+
+    last_update float f32
+    disconnection_time f32
+
+    is_temporal bool // true
+
+    // packet_to_send 
+    is_active bool // false
+
+    ack_queue map[string]u32
+    nack_queue map[string]u32
+
+    // recovery_queue map
+
+    split_packets map[string]TmpMapEncapsulatedPacket
+
+    need_ack [][]int
+
+    send_queue Datagram
+
+    window_start u32
+    window_end u32
+    highest_seq_number u32
+
+    reliable_window_start int
+    reliable_window_end int
+
+    reliable_window map[string]bool
+
+    last_ping_time // -1
+    last_ping_measure // 1
+
+    internal_id int
 }
 
 fn (s mut Session) update() {
@@ -342,6 +381,19 @@ fn (s mut Session) handle_encapsulated_packet_route(packet EncapsulatedPacket) {
             accepted.p.port = connection.p.port
 
             s.queue_connected_packet(accepted.p, Unreliable, 0, PriorityImmediate)
+        }
+        else if pid == NewIncomingConnection {
+            mut connection := NewIncomingConnectionPacket { p: new_packet(packet.buffer, u32(packet.length)) }
+            connection.decode();
+
+            if connection.address.port == s.session_manager.get_port() || s.session_manager.port_checking() {
+                s.state = .connected
+                s.is_temporal = false
+                // s.session_manager.open
+                //
+            }
+
+            }
         }
     }
 }
